@@ -2,6 +2,7 @@ package natsexporter
 
 import (
 	"context"
+	"fmt"
 	"natsexporter/internal/metadata"
 
 	"go.opentelemetry.io/collector/component"
@@ -70,13 +71,16 @@ type natsExporter struct {
 }
 
 func (n *natsExporter) consumeLogs(ctx context.Context, ld plog.Logs) error {
+	fmt.Printf("natsExporter.consumeLogs(), ld=%v", ld)
 	return nil
 }
 
 func (n *natsExporter) Start(_ context.Context, host component.Host) error {
+	fmt.Println("natsExporter.Start()")
 	return nil
 }
 
 func (n *natsExporter) Shutdown(context.Context) error {
+	fmt.Println("natsExporter.Shutdown()")
 	return nil
 }
