@@ -3,7 +3,8 @@ package natsexporter
 import (
 	"context"
 	"fmt"
-	"natsexporter/internal/metadata"
+
+	"github.com/andylibrian/otel-prototype-exporter/internal/metadata"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"

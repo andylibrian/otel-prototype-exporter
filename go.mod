@@ -1,9 +1,8 @@
-module natsexporter
+module github.com/andylibrian/otel-prototype-exporter
 
 go 1.22.0
 
 require (
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.107.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/collector/component v0.107.0
 	go.opentelemetry.io/collector/confmap v0.107.0
