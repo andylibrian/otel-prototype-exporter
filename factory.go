@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.uber.org/zap"
 )
@@ -61,43 +60,64 @@ func getOrCreateFileExporter(cfg component.Config, logger *zap.Logger) NatsExpor
 }
 
 func newFileExporter(conf *Config, logger *zap.Logger) NatsExporter {
+	logsMarshaller, err := createLogMarshaler()
+	if err != nil {
+		logger.Fatal("error wile creating logs Marshaller")
+	}
+
 	return &natsExporter{
-		conf:   conf,
-		logger: logger,
+		conf:           conf,
+		logger:         logger,
+		logsMarshaller: logsMarshaller,
 	}
 }
 
 type natsExporter struct {
-	conf   *Config
-	logger *zap.Logger
+	conf           *Config
+	logger         *zap.Logger
+	logsMarshaller LogsMarshaler
+}
+
+// LogsMarshaler marshals logs into Message array
+type LogsMarshaler interface {
+	Marshal(logs plog.Logs, topic string) ([]byte, error)
+}
+
+type pdataLogsMarshaler struct {
+	marshaler plog.Marshaler
+}
+
+// creates LogsMarshalers based on the provided config
+func createLogMarshaler() (LogsMarshaler, error) {
+	return newPdataLogsMarshaler(&plog.JSONMarshaler{}), nil
+}
+
+func newPdataLogsMarshaler(marshaler plog.Marshaler) LogsMarshaler {
+	return pdataLogsMarshaler{
+		marshaler: marshaler,
+	}
+}
+
+func (p pdataLogsMarshaler) Marshal(ld plog.Logs, topic string) ([]byte, error) {
+	bts, err := p.marshaler.MarshalLogs(ld)
+
+	return bts, err
 }
 
 func (n *natsExporter) consumeLogs(ctx context.Context, ld plog.Logs) error {
-	// Iterate through all resource logs
-	for i := 0; i < ld.ResourceLogs().Len(); i++ {
-		resourceLogs := ld.ResourceLogs().At(i)
-
-		// Iterate through all scope logs
-		for j := 0; j < resourceLogs.ScopeLogs().Len(); j++ {
-			scopeLogs := resourceLogs.ScopeLogs().At(j)
-
-			// Iterate through all log records
-			for k := 0; k < scopeLogs.LogRecords().Len(); k++ {
-				logRecord := scopeLogs.LogRecords().At(k)
-
-				// Access and print the log body
-				body := logRecord.Body()
-				fmt.Printf("natsExporter.consumeLogs() Log Body: %s\n", body.AsString())
-
-				// If you want to print all attributes
-				logRecord.Attributes().Range(func(k string, v pcommon.Value) bool {
-					fmt.Printf("natsExporter.consumeLogs() Attribute %s: %v\n", k, v.AsString())
-					return true
-				})
-			}
-		}
+	marshalled, err := n.logsMarshaller.Marshal(ld, "")
+	if err != nil {
+		return err
 	}
 
+	// test unmarshall
+	// unmarshaller := &plog.JSONUnmarshaler{}
+	// ld2, err := unmarshaller.UnmarshalLogs(marshalled)
+	// if err != nil {
+	// 	return err
+	// }
+
+	fmt.Printf("natsExporter.consumeLogs() Log Marshalled: %s\n", string(marshalled))
 	return nil
 }
 
